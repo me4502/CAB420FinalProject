@@ -7,33 +7,22 @@ import sklearn
 from typing import Tuple, List, Any
 
 
-def readFile(path: str) -> Tuple[List[str], List[List[Any]]]:
+def read_file(path: str) -> Tuple[List[str], List[List[Any]]]:
     with open(path, 'r') as f:
         lines: List[List[Any]] = list(csv.reader(f))
         return lines[0], lines[1:]
 
 
-def makeMovies():
-    headers, data = readFile('./dataset/movies.csv')
+def make_movielens_df() -> pd.DataFrame:
+    headers, data = read_file('./dataset/movies.csv')
     movie_df = pd.DataFrame(data, columns=headers)
-    return movie_df
-
-
-def makeRatings():
-    headers, data = readFile('./dataset/ratings.csv')
+    headers, data = read_file('./dataset/ratings.csv')
     ratings_df = pd.DataFrame(data, columns=headers)
-    ratings_df = ratings_df.drop('timestamp', axis=1)
-    return ratings_df
 
-
-def makeTags():
-    headers, data = readFile('./dataset/tags.csv')
-    tags_df = pd.DataFrame(data, columns=headers)
-    tags_df = tags_df.drop('timestamp', axis=1)
-    return tags_df
+    combined_df = ratings_df.merge(movie_df, how='left', on='movieId')
+    combined_df = combined_df.drop(['movieId', 'timestamp', 'genres'], axis=1)
+    return combined_df.sort_values(by='userId', axis=1)
 
 
 if __name__ == '__main__':
-    print(makeMovies())
-    print(makeRatings())
-    print(makeTags())
+    print(make_movielens_df())
