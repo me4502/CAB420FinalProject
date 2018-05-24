@@ -16,13 +16,13 @@ from typing import Tuple, List, Any
 #
 
 
-def read_file(path: str) -> Tuple[List[str], List[List[Any]]]:
+def read_file(path):
     with open(path, 'r') as f:
-        lines: List[List[Any]] = list(csv.reader(f))
+        lines = list(csv.reader(f))
         return lines[0], lines[1:]
 
 
-def make_movielens_df() -> pd.DataFrame:
+def make_movielens_df():
     headers, data = read_file('./dataset/movies.csv')
     movie_df = pd.DataFrame(data, columns=headers)
     headers, data = read_file('./dataset/ratings.csv')
