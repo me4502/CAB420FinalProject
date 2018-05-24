@@ -5,3 +5,5 @@
 *.synctex.gz
 
 \.vscode/
+.idea/
+*.iml
