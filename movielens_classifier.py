@@ -70,8 +70,8 @@ def separate_train_test(movielens_df: pd.DataFrame):
             [1, 4, 8, 15, 30],  # min_samples_leaf
             [3, 5, 10, 15],  # max_depth
             [0.1, 0.5, 1.0],  # learning_rate
-            [0.0, 0.5, 1.0],  # min_weight_fraction_leaf
-            [0.0, 0.5, 1.0],  # min_impurity_decrease
+            [0.0, 0.5],  # min_weight_fraction_leaf
+            [0.0, 0.5],  # min_impurity_decrease
         ]
     }
 
