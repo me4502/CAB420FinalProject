@@ -22,12 +22,14 @@ def makeMovies():
 def makeRatings():
     headers, data = readFile('./dataset/ratings.csv')
     ratings_df = pd.DataFrame(data, columns=headers)
+    ratings_df = ratings_df.drop('timestamp', axis=1)
     return ratings_df
 
 
 def makeTags():
     headers, data = readFile('./dataset/tags.csv')
     tags_df = pd.DataFrame(data, columns=headers)
+    tags_df = tags_df.drop('timestamp', axis=1)
     return tags_df
 
 
