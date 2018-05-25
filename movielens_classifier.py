@@ -106,17 +106,17 @@ def gradient_boosting_classifier(
 def separate_train_test(movielens_df: pd.DataFrame):
     train, test = train_test_split(movielens_df, test_size=0.3)
     optimising_parameters = {
-        (random_forest_classifier, 'Random Forest'): [
-            [2, 10, 50, 100, 250],  # n_estimators
-            [2, 4, 8, 15, 30],  # min_samples_split
-            [1, 4, 8, 15, 30],  # min_samples_leaf
-        ],
+        # (random_forest_classifier, 'Random Forest'): [
+        #     [2, 10, 50, 100, 250],  # n_estimators
+        #     [2, 4, 8, 15, 30],  # min_samples_split
+        #     [1, 4, 8, 15, 30],  # min_samples_leaf
+        # ],
         (gradient_boosting_classifier, 'Gradient Boosting'): [
             [100, 500, 1000],  # n_estimators
-            [2, 4, 8, 15],  # min_samples_split
-            [1, 4, 8, 15],  # min_samples_leaf
-            [3, 5, 10],  # max_depth
-            [0.1, 0.5, 1.0],  # learning_rate
+            [7, 15],  # min_samples_split
+            [7, 15],  # min_samples_leaf
+            [3, 10],  # max_depth
+            [0.1],  # learning_rate
             [0.0],  # min_weight_fraction_leaf
             [0.0],  # min_impurity_decrease
         ]
@@ -138,6 +138,7 @@ def separate_train_test(movielens_df: pd.DataFrame):
                 best_match_percentage = perc
                 best_match = list(prod) + [classifier[1]]
                 print(perc)
+                print(best_match)
     print(best_match)
     print(best_match_percentage)
 
