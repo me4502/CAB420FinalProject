@@ -1,8 +1,12 @@
 import csv
 import itertools
+import math
+import os
 
 import numpy as np
 import pandas as pd
+from sklearn.externals import joblib
+from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
 from sklearn import ensemble
 
@@ -13,7 +17,13 @@ from sklearn import ensemble
 # Added gradient boosting tests as well
 # - Slightly better results, but slower (33.3%)
 # Adding genre to the model.
-#
+# Looking into general parameters for different data set sizes.
+# Optimiser returned [1000,15,7,10,0.1,0.0,0.0,'Gradient Boosting'] at 69%
+# Switching to RMSE with cross val -
+#   [100,15,7,10,0.1,0.0,0.0,'Gradient Boosting']
+#   Average RMSE of 86% across the cross validation sets
+#   After testing 100 cases of shuffled sets pre-split,
+#   the 86% accuracy remains - meaning unlikely to be overfitted
 
 
 # Adapted from https://stackoverflow.com/a/40449726
@@ -48,7 +58,7 @@ def explode(df, lst_cols, fill_value=''):
 
 
 def read_file(path):
-    with open(path, 'r') as f:
+    with open(path, 'r', encoding='utf8') as f:
         lines = list(csv.reader(f))
         return lines[0], lines[1:]
 
@@ -103,14 +113,30 @@ def gradient_boosting_classifier(
     )
 
 
-def separate_train_test(movielens_df: pd.DataFrame):
+def train_model(movielens_df: pd.DataFrame):
+    # Use movielens_df.sample(frac=1) for random shuffle
+    train, test = train_test_split(movielens_df, test_size=0.3)
+    # Parameters determined by running optimiser
+    if os.path.isfile('model_cache.pkl'):
+        model = joblib.load('model_cache.pkl')
+    else:
+        model = gradient_boosting_classifier(100, 15, 7, 10, 0.1, 0.0, 0.0)
+        model.fit(train.loc[:, train.columns != 'rating'], train['rating'])
+        joblib.dump(model, 'model_cache.pkl')
+    test_pred = model.predict(test.loc[:, test.columns != 'rating'])
+
+    rmse = math.sqrt(mean_squared_error(test['rating'].values, test_pred))
+    print(rmse)
+
+
+def run_optimiser(movielens_df: pd.DataFrame):
     train, test = train_test_split(movielens_df, test_size=0.3)
     optimising_parameters = {
-        # (random_forest_classifier, 'Random Forest'): [
-        #     [2, 10, 50, 100, 250],  # n_estimators
-        #     [2, 4, 8, 15, 30],  # min_samples_split
-        #     [1, 4, 8, 15, 30],  # min_samples_leaf
-        # ],
+        (random_forest_classifier, 'Random Forest'): [
+            [2, 10, 50, 100, 250],  # n_estimators
+            [2, 4, 8, 15, 30],  # min_samples_split
+            [1, 4, 8, 15, 30],  # min_samples_leaf
+        ],
         (gradient_boosting_classifier, 'Gradient Boosting'): [
             [100, 500, 1000],  # n_estimators
             [7, 15],  # min_samples_split
@@ -144,4 +170,4 @@ def separate_train_test(movielens_df: pd.DataFrame):
 
 
 if __name__ == '__main__':
-    separate_train_test(make_movielens_df())
+    train_model(make_movielens_df())

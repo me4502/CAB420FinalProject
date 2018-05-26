@@ -3,6 +3,7 @@
 *.aux
 *~
 *.synctex.gz
+model_cache.pkl
 
 \.vscode/
 .idea/
