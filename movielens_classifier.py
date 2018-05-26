@@ -5,6 +5,9 @@ import os
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+
 from sklearn.externals import joblib
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
@@ -24,6 +27,10 @@ from sklearn import ensemble
 #   Average RMSE of 86% across the cross validation sets
 #   After testing 100 cases of shuffled sets pre-split,
 #   the 86% accuracy remains - meaning unlikely to be overfitted
+
+""" Global variables. """
+genre_map = dict()
+genre_count = 0
 
 
 # Adapted from https://stackoverflow.com/a/40449726
@@ -63,11 +70,12 @@ def read_file(path):
         return lines[0], lines[1:]
 
 
-genre_map = dict()
-genre_count = 0
-
-
 def genre_mapper(x):
+    """ Maps movie genres to the global variable "genre_map"
+
+    Returns:
+        Dictionary -- Maps genre id (int) to genre (string)
+    """
     if x not in genre_map:
         global genre_count
         genre_map[x] = genre_count
@@ -76,6 +84,17 @@ def genre_mapper(x):
 
 
 def make_movielens_df():
+    """ Constructs and returns a panda DataFrame object with the following 
+        table structure:
+
+                userId movieId rating  genre
+        0          1      31    2.5      0
+        1          1    1953    4.0     13
+        2          1    1953    4.0      4
+    
+    Returns:
+        DataFrame -- panda DataFrame containing usable features.
+    """
     headers, data = read_file('./dataset/movies.csv')
     movie_df = pd.DataFrame(data, columns=headers).drop('title', axis=1)
     headers, data = read_file('./dataset/ratings.csv')
@@ -169,5 +188,51 @@ def run_optimiser(movielens_df: pd.DataFrame):
     print(best_match_percentage)
 
 
+
+def explore_data(dataset):
+
+    # Display count for each genre of movie
+    genre_count = dataset.groupby('genre')['movieId'].nunique()
+    genre_map_sorted = sorted(genre_map.items(), key=lambda x: x[1])
+    genres = [x[0] for x in genre_map_sorted]
+    x = dataset['genre']
+    num_bins = len(genre_count)
+    counts, bins, bars = plt.hist(x, num_bins, facecolor='blue', alpha=0.5)
+    plt.xticks(range(num_bins), genres, rotation=90)
+    plt.xlabel('Genre')
+    plt.ylabel('Review Count')
+    plt.title('Histogram of Total Reviews Per Genre')
+    plt.show()
+
+
+    # Plot rating and genre
+    rating = dataset.loc[:,'rating']
+    genre = dataset.loc[:,'genre']
+    # totals = np.zeros((20,11))
+    totals = np.ones((20,11)) # Use if normalising with the LogNorm() function
+
+    # Sum ratings for each genre for 0-5 stars
+    for entry in range(len(rating)):
+        totals[int(genre[entry])][int(float(rating[entry])*2)] += 1
+
+    # Lables for axis
+    Index = genres
+    Cols = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]
+    df = pd.DataFrame(totals, index=Index, columns=Cols)
+    plt.pcolor(df, norm=colors.LogNorm())
+    # plt.pcolor(df, norm=colors.Normalize())
+    # plt.pcolor(df, vmin=0, vmax=3000)
+    plt.yticks(np.arange(0.5, len(df.index), 1), df.index)
+    plt.xticks(np.arange(0.5, len(df.columns), 1), df.columns)
+    plt.xlabel('Review Score (Stars)')
+    plt.ylabel('Genre')
+    plt.title('Heatmap of Review Scores Against Genre')
+    plt.show()
+
+
+
 if __name__ == '__main__':
-    train_model(make_movielens_df())
+
+    dataset = make_movielens_df()
+    explore_data(dataset)
+    train_model(dataset)
