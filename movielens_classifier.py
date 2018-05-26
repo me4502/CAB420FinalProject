@@ -19,7 +19,11 @@ from sklearn import ensemble
 # Adding genre to the model.
 # Looking into general parameters for different data set sizes.
 # Optimiser returned [1000,15,7,10,0.1,0.0,0.0,'Gradient Boosting'] at 69%
-#
+# Switching to RMSE with cross val -
+#   [100,15,7,10,0.1,0.0,0.0,'Gradient Boosting']
+#   Average RMSE of 86% across the cross validation sets
+#   After testing 100 cases of shuffled sets pre-split,
+#   the 86% accuracy remains - meaning unlikely to be overfitted
 
 
 # Adapted from https://stackoverflow.com/a/40449726
@@ -110,12 +114,13 @@ def gradient_boosting_classifier(
 
 
 def train_model(movielens_df: pd.DataFrame):
+    # Use movielens_df.sample(frac=1) for random shuffle
     train, test = train_test_split(movielens_df, test_size=0.3)
     # Parameters determined by running optimiser
     if os.path.isfile('model_cache.pkl'):
         model = joblib.load('model_cache.pkl')
     else:
-        model = gradient_boosting_classifier(1000, 15, 7, 10, 0.1, 0.0, 0.0)
+        model = gradient_boosting_classifier(100, 15, 7, 10, 0.1, 0.0, 0.0)
         model.fit(train.loc[:, train.columns != 'rating'], train['rating'])
         joblib.dump(model, 'model_cache.pkl')
     test_pred = model.predict(test.loc[:, test.columns != 'rating'])
