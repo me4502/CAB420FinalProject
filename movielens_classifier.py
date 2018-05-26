@@ -58,7 +58,7 @@ def explode(df, lst_cols, fill_value=''):
 
 
 def read_file(path):
-    with open(path, 'r') as f:
+    with open(path, 'r', encoding='utf8') as f:
         lines = list(csv.reader(f))
         return lines[0], lines[1:]
 
