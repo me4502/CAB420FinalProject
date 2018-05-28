@@ -24,9 +24,10 @@ from sklearn import ensemble
 # Optimiser returned [1000,15,7,10,0.1,0.0,0.0,'Gradient Boosting'] at 69%
 # Switching to RMSE with cross val -
 #   [100,15,7,10,0.1,0.0,0.0,'Gradient Boosting']
-#   Average RMSE of 86% across the cross validation sets
+#   Average RMSE of 0.86 across the cross validation sets, accuracy of 72%
 #   After testing 100 cases of shuffled sets pre-split,
-#   the 86% accuracy remains - meaning unlikely to be overfitted
+#   the 72% accuracy remains - meaning unlikely to be overfitted
+#   random forest RMSE was 1.09
 
 """ Global variables. """
 genre_map = dict()
