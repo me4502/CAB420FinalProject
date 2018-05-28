@@ -67,6 +67,7 @@ def explode(df, lst_cols, fill_value=''):
 def read_file(path):
     with open(path, 'r', encoding='utf8') as f:
         lines = list(csv.reader(f))
+        print(lines)
         return lines[0], lines[1:]
 
 
@@ -107,6 +108,11 @@ def make_movielens_df():
     combined_df = explode(combined_df, 'genres')
     combined_df['genre'] = combined_df['genres'].apply(genre_mapper)
     return combined_df.drop('genres', axis=1).sort_values(by='userId')
+
+
+# linear and rbf (default) kernels used
+def svm_classifier(kernel):
+    return ensemble.svm.SVC(kernel=kernel)
 
 
 def random_forest_classifier(n_estimators, min_samples_split, min_samples_leaf):
