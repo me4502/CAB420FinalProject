@@ -184,7 +184,9 @@ def run_optimiser(movielens_df: pd.DataFrame):
             test_pred = model.predict(test.loc[:, test.columns != 'rating'])
             test_pred_df = pd.DataFrame(test_pred, columns=['Predicted'])
             test_pred_df['Actual'] = test['rating'].reset_index(drop=True)
-            test_pred_df['Same'] = test_pred_df.apply(lambda row: row['Predicted'] == row['Actual'], axis=1)
+            test_pred_df['Same'] = test_pred_df.apply(
+                lambda row: row['Predicted'] == row['Actual'], axis=1
+            )
             perc = test_pred_df['Same'].sum() / test_pred_df['Same'].count()
             if perc > best_match_percentage:
                 best_match_percentage = perc
@@ -195,37 +197,32 @@ def run_optimiser(movielens_df: pd.DataFrame):
     print(best_match_percentage)
 
 
-
 def explore_data(dataset):
-
     # Display count for each genre of movie
-    genre_count = dataset.groupby('genre')['movieId'].nunique()
+    unique_genres = dataset.groupby('genre')['movieId'].nunique()
     genre_map_sorted = sorted(genre_map.items(), key=lambda x: x[1])
     genres = [x[0] for x in genre_map_sorted]
     x = dataset['genre']
-    num_bins = len(genre_count)
-    counts, bins, bars = plt.hist(x, num_bins, facecolor='blue', alpha=0.5)
+    num_bins = len(unique_genres)
+    plt.hist(x, num_bins, facecolor='blue', alpha=0.5)
     plt.xticks(range(num_bins), genres, rotation=90)
     plt.xlabel('Genre')
     plt.ylabel('Review Count')
     plt.title('Histogram of Total Reviews Per Genre')
     plt.show()
 
-
     # Plot rating and genre
-    rating = dataset.loc[:,'rating']
-    genre = dataset.loc[:,'genre']
+    rating = dataset.loc[:, 'rating']
+    genre = dataset.loc[:, 'genre']
     # totals = np.zeros((20,11))
-    totals = np.ones((20,11)) # Use if normalising with the LogNorm() function
+    totals = np.ones((20, 11))  # Use if normalising with the LogNorm function
 
     # Sum ratings for each genre for 0-5 stars
     for entry in range(len(rating)):
         totals[int(genre[entry])][int(float(rating[entry])*2)] += 1
 
     # Lables for axis
-    Index = genres
-    Cols = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]
-    df = pd.DataFrame(totals, index=Index, columns=Cols)
+    df = pd.DataFrame(totals, index=genres, columns=[x / 2 for x in range(11)])
     plt.pcolor(df, norm=colors.LogNorm())
     # plt.pcolor(df, norm=colors.Normalize())
     # plt.pcolor(df, vmin=0, vmax=3000)
@@ -237,9 +234,7 @@ def explore_data(dataset):
     plt.show()
 
 
-
 if __name__ == '__main__':
-
     dataset = make_movielens_df()
     explore_data(dataset)
     train_model(dataset)
