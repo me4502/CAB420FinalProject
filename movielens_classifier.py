@@ -1,3 +1,4 @@
+import asyncio
 import csv
 import itertools
 import math
@@ -155,8 +156,34 @@ def train_model(movielens_df: pd.DataFrame):
     print(rmse)
 
 
+async def _test_algorithm(train_set, test_set, prod, classifier):
+    model = classifier(*prod)
+    model.fit(train_set.loc[:, train_set.columns != 'rating'],
+              train_set['rating'])
+    test_pred = model.predict(
+        test_set.loc[:, test_set.columns != 'rating']
+    )
+    test_pred_df = pd.DataFrame(test_pred, columns=['Predicted'])
+    test_pred_df['Actual'] = test_set['rating'].reset_index(
+        drop=True
+    )
+    test_pred_df['Same'] = test_pred_df.apply(
+        lambda row: row['Predicted'] == row['Actual'], axis=1
+    )
+
+    return (
+        test_pred_df['Same'].sum() / test_pred_df['Same'].count(),
+        math.sqrt(mean_squared_error(
+                test_pred_df['Actual'].values,
+                test_pred_df['Predicted'].values
+        ))
+    )
+
+
 def run_optimiser(movielens_df: pd.DataFrame):
     print('Finding Optimal Parameter Set')
+    print('-----------------------------')
+    loop = asyncio.get_event_loop()
     kfold = KFold(n_splits=4)
 
     data_sets = [
@@ -188,28 +215,14 @@ def run_optimiser(movielens_df: pd.DataFrame):
         for prod in itertools.product(*parameters):
             current_perc = 0
             current_rmse = 0
-            for train_set, test_set in data_sets:
-                model = classifier[0](*prod)
-                model.fit(train_set.loc[:, train_set.columns != 'rating'],
-                          train_set['rating'])
-                test_pred = model.predict(
-                    test_set.loc[:, test_set.columns != 'rating']
-                )
-                test_pred_df = pd.DataFrame(test_pred, columns=['Predicted'])
-                test_pred_df['Actual'] = test_set['rating'].reset_index(
-                    drop=True
-                )
-                test_pred_df['Same'] = test_pred_df.apply(
-                    lambda row: row['Predicted'] == row['Actual'], axis=1
-                )
-                current_perc += (test_pred_df['Same'].sum()
-                                 / test_pred_df['Same'].count())
-                current_rmse += math.sqrt(
-                    mean_squared_error(
-                        test_pred_df['Actual'].values,
-                        test_pred_df['Predicted'].values
-                    )
-                )
+            done, _ = loop.run_until_complete(asyncio.wait([
+                _test_algorithm(train_set, test_set, prod, classifier[0])
+                for train_set, test_set in data_sets
+            ]))
+            for future in done:
+                result = future.result()
+                current_perc += result[0]
+                current_rmse += result[1]
             perc = current_perc / len(data_sets)
             rmse = current_rmse / len(data_sets)
             if rmse < best_match_rmse:
@@ -224,6 +237,7 @@ def run_optimiser(movielens_df: pd.DataFrame):
     print("Best Parameters: {}".format(best_match))
     print("Best RMSE: {}".format(best_match_rmse))
     print("Best Exact Percentage: {}".format(best_match_perc))
+    loop.close()
 
 
 def explore_data(dataset):
