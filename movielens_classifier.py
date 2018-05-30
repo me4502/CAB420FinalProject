@@ -2,6 +2,7 @@ import csv
 import itertools
 import math
 import os
+import sys
 
 import numpy as np
 import pandas as pd
@@ -10,7 +11,7 @@ import matplotlib.colors as colors
 
 from sklearn.externals import joblib
 from sklearn.metrics import mean_squared_error
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, KFold
 from sklearn import ensemble
 
 #
@@ -68,7 +69,6 @@ def explode(df, lst_cols, fill_value=''):
 def read_file(path):
     with open(path, 'r', encoding='utf8') as f:
         lines = list(csv.reader(f))
-        print(lines)
         return lines[0], lines[1:]
 
 
@@ -156,12 +156,18 @@ def train_model(movielens_df: pd.DataFrame):
 
 
 def run_optimiser(movielens_df: pd.DataFrame):
-    train, test = train_test_split(movielens_df, test_size=0.3)
+    print('Finding Optimal Parameter Set')
+    kfold = KFold(n_splits=4)
+
+    data_sets = [
+        (movielens_df.iloc[train_split], movielens_df.iloc[test_split])
+        for train_split, test_split in kfold.split(movielens_df)
+    ]
     optimising_parameters = {
         (random_forest_classifier, 'Random Forest'): [
-            [2, 10, 50, 100, 250],  # n_estimators
-            [2, 4, 8, 15, 30],  # min_samples_split
-            [1, 4, 8, 15, 30],  # min_samples_leaf
+            [10, 50, 100, 250, 500],  # n_estimators
+            [3, 7, 15],  # min_samples_split
+            [3, 7, 15],  # min_samples_leaf
         ],
         (gradient_boosting_classifier, 'Gradient Boosting'): [
             [100, 500, 1000],  # n_estimators
@@ -175,26 +181,49 @@ def run_optimiser(movielens_df: pd.DataFrame):
     }
 
     best_match = None
-    best_match_percentage = 0
+    best_match_rmse = 10000000  # Very high value
+    best_match_perc = 0
 
     for classifier, parameters in optimising_parameters.items():
         for prod in itertools.product(*parameters):
-            model = classifier[0](*prod)
-            model.fit(train.loc[:, train.columns != 'rating'], train['rating'])
-            test_pred = model.predict(test.loc[:, test.columns != 'rating'])
-            test_pred_df = pd.DataFrame(test_pred, columns=['Predicted'])
-            test_pred_df['Actual'] = test['rating'].reset_index(drop=True)
-            test_pred_df['Same'] = test_pred_df.apply(
-                lambda row: row['Predicted'] == row['Actual'], axis=1
-            )
-            perc = test_pred_df['Same'].sum() / test_pred_df['Same'].count()
-            if perc > best_match_percentage:
-                best_match_percentage = perc
+            current_perc = 0
+            current_rmse = 0
+            for train_set, test_set in data_sets:
+                model = classifier[0](*prod)
+                model.fit(train_set.loc[:, train_set.columns != 'rating'],
+                          train_set['rating'])
+                test_pred = model.predict(
+                    test_set.loc[:, test_set.columns != 'rating']
+                )
+                test_pred_df = pd.DataFrame(test_pred, columns=['Predicted'])
+                test_pred_df['Actual'] = test_set['rating'].reset_index(
+                    drop=True
+                )
+                test_pred_df['Same'] = test_pred_df.apply(
+                    lambda row: row['Predicted'] == row['Actual'], axis=1
+                )
+                current_perc += (test_pred_df['Same'].sum()
+                                 / test_pred_df['Same'].count())
+                current_rmse += math.sqrt(
+                    mean_squared_error(
+                        test_pred_df['Actual'].values,
+                        test_pred_df['Predicted'].values
+                    )
+                )
+            perc = current_perc / len(data_sets)
+            rmse = current_rmse / len(data_sets)
+            if rmse < best_match_rmse:
+                best_match_rmse = rmse
+                best_match_perc = perc
                 best_match = list(prod) + [classifier[1]]
-                print(perc)
-                print(best_match)
-    print(best_match)
-    print(best_match_percentage)
+                print("Current Parameters: {}".format(best_match))
+                print("Current Exact Percentage: {}".format(perc))
+                print("Current RMSE: {}".format(rmse))
+                print("---------------------------------------------------")
+
+    print("Best Parameters: {}".format(best_match))
+    print("Best RMSE: {}".format(best_match_rmse))
+    print("Best Exact Percentage: {}".format(best_match_perc))
 
 
 def explore_data(dataset):
@@ -236,5 +265,8 @@ def explore_data(dataset):
 
 if __name__ == '__main__':
     dataset = make_movielens_df()
-    explore_data(dataset)
-    train_model(dataset)
+    if len(sys.argv) > 1 and sys.argv[1] == 'optimise':
+        run_optimiser(dataset)
+    else:
+        explore_data(dataset)
+        train_model(dataset)
